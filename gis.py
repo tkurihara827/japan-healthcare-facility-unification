@@ -3,7 +3,7 @@
 """
 Created on Mon Oct 20 14:42:53 2025
 
-@author: tkurihara
+@author: tkurihara827
 """
 
 #gis.py
@@ -83,22 +83,6 @@ except FileNotFoundError:
 
 # 最終処理済みデータセットの保存
 df5.to_excel(TOTAL3_FILE, index=False)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
