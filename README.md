@@ -90,6 +90,6 @@ python gis.py
 
 本コードは、オープンソースソフトウェアとして**MIT License**のもと公開されています。本研究手法を学術論文で引用する際は、本リポジトリのDOIを参照してください。
 
-•**リポジトリ名**: japan-healthcare-facility-unification
+**リポジトリ名**: japan-healthcare-facility-unification
 
-•**DOI**（Zenodoで取得）: [DOIをここに追加]
+**Citation (DOI)** : Takashi Kurihara. (2025). tkurihara827/japan-healthcare-facility-unification: v1.0.0: Initial Data Pipeline Release (v1.0.0). Zenodo. [https://doi.org/10.5281/zenodo.17399681]
