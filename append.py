@@ -3,7 +3,7 @@
 """
 Created on Fri Oct 17 18:13:18 2025
 
-@author: tkurihara
+@author: tkurihara827
 """
 
 #append.py
