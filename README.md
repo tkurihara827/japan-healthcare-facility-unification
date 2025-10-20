@@ -1,4 +1,4 @@
-# japan-healthcare-facility-unification: 全国医療機関データ統合パイプライン
+# japan-healthcare-facility-unification: コード内容別医療機関一覧表から全国版データを作成
 Pipeline to unify prefectural **Japanese healthcare facility** registry data into a national, analysis-ready dataset. Features robust data shifting, custom calendar conversion, and **string similarity matching** for 63 medical subjects. **This repository is for Japanese speakers.**
 
 このリポジトリは、厚生労働省や各地方局から公開されている**都道府県別の医療機関データ（コード内容別一覧表）**を、統計分析やGIS分析に利用可能な**全国統合データセット**として作成するためのデータクレンジングおよび統合パイプライン（Pythonスクリプト）です。
