@@ -1,0 +1,19 @@
+Variable; Name; Description; Type; Notes
+
+id; 施設ID; Integer; 処理中に割り当てられた一意の連番ID
+pref; 都道府県番号; String; 厚労省の都道府県番号
+post; 郵便番号; String; 施設の郵便番号
+address; 所在地; String; 所在地（統一・クレンジング済み）
+name; 施設名称; String; 施設名称
+establisher; 開設者名; String; 施設の開設者
+owner; 経営主体; String; 施設の経営主体
+type_status; 病院/診療所の種別 & 現存/廃止などの状態; String; 医療施設の属性や状態に関する情報
+n_tenu...n_ntenu_den; 常勤・非常勤医師/歯科医師数; Integer; 常勤/非常勤の医師・歯科医師の人数に関する変数群
+r_other...r_update; 届出事由フラグ; Binary; 届出事由に関するダミー変数群（新規開設、変更、廃止など）：type_statusに基づく
+c; 入力診療科目; String; 元データに残っていた診療科目テキスト（クレンジング前）
+r_year, r_month, r_day; 届出年月日; Integer; 届出の年/月/日（和暦から西暦に変換済み）
+s_year, s_month, s_day; 開設年月日; Integer; 開設の年/月/日（和暦から西暦に変換済み）
+defunct; 廃止フラグ; Binary; 廃止された施設の場合 1
+yoryo...tokutei; 特定機能施設フラグ; Binary; 特定機能病院、地域医療支援病院などのダミー変数
+bed, n_bed, n_bed_sum; 病床数関連; Integer; 病床に関する情報
+internalmedicine...pediatriccardiology; 診療科目ダミー; Binary; 63種の公式診療科目に関するダミー変数群。類似度計算によりマッチングされた科目が1
