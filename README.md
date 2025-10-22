@@ -97,4 +97,4 @@ python gis.py
 
 **リポジトリ名**: japan-healthcare-facility-unification
 
-**Citation (DOI)** : Takashi Kurihara. (2025). tkurihara827/japan-healthcare-facility-unification: v1.0.0: Initial Data Pipeline Release (v1.0.0). Zenodo. [https://doi.org/10.5281/zenodo.17404341]
+**Citation (DOI)** : Takashi Kurihara. (2025). tkurihara827/japan-healthcare-facility-unification: v1.0.1: Updated Data Pipeline Release (v1.0.1). Zenodo. [https://doi.org/10.5281/zenodo.17418724]
