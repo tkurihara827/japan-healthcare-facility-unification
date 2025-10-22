@@ -2,6 +2,7 @@ Variable; Name; Description; Type; Notes
 
 id; 施設ID; Integer; 処理中に割り当てられた一意の連番ID
 pref; 都道府県番号; String; 厚労省の都道府県番号
+code; pref+医療機関番号; String;元データの医療機関番号に該当
 post; 郵便番号; String; 施設の郵便番号
 address; 所在地; String; 所在地（統一・クレンジング済み）
 name; 施設名称; String; 施設名称
