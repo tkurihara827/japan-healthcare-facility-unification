@@ -20,14 +20,14 @@ from difflib import SequenceMatcher # **文字列類似度計算アルゴリズ�
 
 # 外部化された設定変数
 # データパイプラインの再現性と保守性を確保するため、パラメータを一元管理する
-# 作業ディレクトリ名（例: 'test2'）
+# 作業ディレクトリ名（例: 'r512'）
 WORKDIR_NAME = 'r512'
 # 処理対象データの時間的コホートを識別するキー（例: 和暦5年12月）
 DATA_MONTH = 'r0512'
 
 # ベースディレクトリ指定
 # データソースと処理結果の格納場所を絶対パスで定義
-BASE_DIR = f'/Users/tkurihara/Desktop/{WORKDIR_NAME}'
+BASE_DIR = f'/Users/tkurihara/Desktop/v.1.0.0/{WORKDIR_NAME}'
 
 # 作業ディレクトリの変更
 try:
@@ -57,20 +57,19 @@ ADDRESS_OUT_CSV = os.path.join(MERGE_DIR, 'address_out.csv')
 #汎用関数
 # 縦方向のデータ繰り越し処理（特に、ヘッダ行を持たない非定型データ構造からの情報抽出に必須）
 def move(n,x,m,v1,v2,w):
-    # データフレーム内の隣接する行間（row_num: m）で同一のエンティティID（"id"）を共有し、
+    # データフレーム内の隣接する行間（row_num: m）で同一の"id"を共有し、
     # ターゲットカラム（v1）がプレースホルダ（"*"）である場合に、
     # ソースカラム（v2）のデータを繰り越す処理。
     for i in range(0,n):
         if x.at[i+m,"id"] == x.at[i,"id"] and x.at[i,v1] == "*" and w in x.at[i+m,v2]:
             x.at[i, v1] = x.at[i+m,v2]
             
-# 特定の条件（w）を満たす行をデータセットから除外（データのクレンジングと対象エンティティの絞り込み）
+# 特定の条件（w）を満たす行をデータセットから除外
 def rdel(x,v,w):
     x.drop(x[x[v].str.contains(w)].index, inplace = True)
 
-# 文字列置換の汎用化（データ品質向上と統一化のためのサニタイズ処理）
+# 文字列置換の汎用化
 def rep(x,var,w1,w2):
-    # Pandasのベクトル化されたstrアクセサを利用し、カラム全体に対する置換を高速に実行
     x[var] = x[var].str.replace(w1, w2)
 
 
@@ -121,7 +120,6 @@ os.makedirs(PROC_DIR, exist_ok=True)
 
 for m in range(1,49):
     try:
-        # 都道府県別（1〜48）の生データファイル（Excel形式）のバッチ処理
         df1 = pd.read_excel(
         f"{RAW_DIR}/{m}.xlsx", 
         skiprows = pre0, 
@@ -131,19 +129,13 @@ for m in range(1,49):
     except FileNotFoundError:
         # ファイルが存在しない場合（例: 存在しない都道府県番号）は処理をスキップ
         continue
-    
     k=len(df1)
-    
     for i in pre2:
-        # 補助属性カラムを初期プレースホルダで初期化
         df1[i] = "*"
-    
-    # 欠損値の補完：同一エンティティ内での情報欠落を前方の非欠損値で埋める（FFILL: Forward Fill）
+    # 欠損値の補完：同一id内での情報欠落を前方の非欠損値で埋める（FFILL: Forward Fill）
     df1.fillna(method="ffill", inplace = True)
-    
-    # データの粒度統一：特定のカテゴリ名を短縮形に統一（例: 総合病院 -> 総合）
+    # 総合病院 -> 総合
     rep(df1,"type","総合病院", "総合")
-    
     # move関数を用いた縦方向データ繰り越し処理のパラメータ設定
     move_params = [
         (k-1, 1, "n_tenu", "tell", "常"), 
@@ -166,20 +158,16 @@ for m in range(1,49):
         (k-5, 5, "c6", "category", ""),
         (k-6, 6, "c7", "category", "")
         ]
-    
     # 定義されたパラメータに基づく繰り越し関数 move() の実行
     for idx, row_num, target_col, src_col, val in move_params:
         move(idx, df1, row_num, target_col, src_col, val)
-
-    # 無効なステータスを持つエンティティ（例: 休止、現存）を除外
+    # 無効なステータスを持つ行を除外
     for i in ["現存","休止"]:
         rdel(df1,"type",i)
-    # 不必要な情報（例: 常勤関連情報）を含む行を除外
+    # 不必要な情報を含む行を除外
     rdel(df1,"tell","常")
-    
     # 都道府県コードの整合性確保（コード48は北海道の重複を回避するための暫定措置と推測）
     df1["pref"] = m if m < 48 else 1
-    
     # 前処理済みデータセットを中間ファイルとして保存
     df1.to_excel(f'{PROC_DIR}/{DATA_MONTH}_{m}.xlsx', index=False)
 
@@ -188,35 +176,31 @@ for m in range(1,49):
 # 統合済みデータセットを格納するディレクトリを作成
 os.makedirs(MERGE_DIR, exist_ok=True)
 
-
 # 全都道府県の前処理済みファイルを収集
 files = glob.glob(f'{PROC_DIR}/*.xlsx')
 data_list = []
 for i in files:
-    # 各ファイルを読み込みリストに格納
     data_list.append(pd.read_excel(i))
 
 # 垂直方向へのデータ結合（全都道府県データの統合）
 df2 = pd.concat(data_list, axis=0, sort=False)
 
 
-# 不要なメタデータカラムの削除と、エンティティID及び住所に基づくソーティング
+# 不要なメタデータカラムの削除と、ID及び住所に基づくソーティング
 df2.drop(columns=['Unnamed: 0','id', 'tell'], inplace = True, errors='ignore')
 df2.sort_values(by = ["pref", "address"], inplace = True)
 df2["post"]=df2["address"] # 郵便番号抽出のための住所カラムの複製
 
 
-# 登録理由に関するデータクレンジング：一意なエンティティ識別のための不必要な変動要因を除外
+# 登録理由に関するデータクレンジング：一意なid識別のための不必要な変動要因を除外
 for i in ["その他","移動","新規","交代","移転","組織変更","開設者変","更新"]:
     rdel(df2,"register",i)
-
 
 # 複数カラムに分散した診療科情報を単一の複合カラムに結合（データ集約）
 df2['c']=df2['c1'].astype(str)+'/'+df2['c2'].astype(str)+'/'+df2['c3'].astype(str)+'/'+df2['c4'].astype(str)+'/'+df2['c5'].astype(str)+'/'+df2['c6'].astype(str)+'/'+df2['c7'].astype(str)
 df2.drop(columns=['c1','c2', 'c3','c4','c5', 'c6', 'c7'], inplace = True)
 
-# 結合後の文字列サニタイズ処理
-
+# 結合後の文字列処理
 rep_df2=[
     ('\*', ''),
     ('/*', ''),
@@ -228,25 +212,43 @@ rep_df2=[
 for old, new in rep_df2:
     rep(df2,'c',old, new)
 
-
 # 病床数情報（例: :1, :2）を区別するためのフォーマット変換
 for i in range(1,10):
     rep(df2,'c','/{0}'.format(i),':{0}'.format(i))
 
-
-# 和暦の日付フィールド（登録日、開設日）の標準化とサニタイズ
+# 和暦の日付フィールド（登録日、開設日）の標準化
 for i in ['register','start']:
+    rep(df2,i," ","")
+    rep(df2,i,"　","")
+    rep(df2,i,"\t","")
     rep(df2,i,' ', '')
     rep(df2,i,'元', '1') # 和暦元号初年を表す「元」を「1」に置換
     rep(df2,i,'令', '令.') # 和暦元号の文字と年数の間に区切り文字を挿入
     rep(df2,i,'平', '平.')
     rep(df2,i,'昭', '昭.')
-    # 日付のゼロパディング（例: .1. -> .01.）を実行し、日付解析のロバスト性を向上
+    # 日付のゼロパディング（例: .1. -> .01.）
     for j in range(1,10):
         rep(df2,i,'.{0}.'.format(j),'.0{0}.'.format(j))
-    for j in range(1,10):
         rep(df2,i,'.{0}.'.format(j),'.0{0}.'.format(j))
+    rep(df2,i,'.', '')
 
+# 西暦変換と年月日の分割
+for i in ["register_year", "register_month", "register_day","start_year", "start_month", "start_day"]:
+    df2[i]=0
+
+df2 = df2.reset_index(drop=True)
+
+for i in ['register', 'start']:
+    for k in range(len(df2)):
+        if "昭" in df2[i][k]:
+            df2[f"{i}_year"][k] = 1925 + int(df2[i][k][1:3])
+        elif "平" in df2[i][k]:
+            df2[f"{i}_year"][k] = 1988 + int(df2[i][k][1:3])
+        elif "令" in df2[i][k]:
+            df2[f"{i}_year"][k] = 2018 + int(df2[i][k][1:3])
+        df2[f"{i}_month"][k] = int(df2[i][k][3:5])
+        df2[f"{i}_day"][k] = int(df2[i][k][5:])
+        
 
 # 施設種別情報を単一の複合カラムに結合
 df2["type_status"]=df2["type"].astype(str)+'/'+df2["type1"].astype(str)+'/'+df2["type2"].astype(str)+'/'+df2["type3"].astype(str)+'/'+df2["type4"].astype(str)
@@ -257,7 +259,6 @@ rep(df2,'type_status','/*', '')
 wareki = ['昭', '平', '令']
 r_check = df2['reason'].astype(str).str.contains('|'.join(wareki), na=False) 
 df2.loc[r_check, 'reason'] = '0' 
-
 
 # 理由情報を複数のダミー変数カラムに展開
 r_var = ["r_other","r_move","r_new","r_exch", "r_org", "r_estach","r_update"]
@@ -272,6 +273,7 @@ df2['id'] = range(1, len(df2.index) + 1)
 df2 = df2[[
     'id',
     'pref',
+    'code',
     'post',
     'address',
     "name",
@@ -279,6 +281,12 @@ df2 = df2[[
     "owner",
     "register",
     "start",
+    "register_year", 
+    "register_month", 
+    "register_day",
+    "start_year", 
+    "start_month", 
+    "start_day",
     "type_status",
     "n_tenu",
     "n_tenu_dr",
@@ -321,7 +329,6 @@ replace_pairs = [
 for col in cols:
     for old, new in replace_pairs:
         rep(df2, col, old, new)
-
 
 # 理由情報をバイナリダミー変数に変換するためのマッピング辞書
 rep_dict = {
@@ -374,12 +381,10 @@ for col, params in rep_settings.items():
     for i in sorted(set(r_list) - exclude, key=r_list.index):
         rep(df2, col, i, "0")
 
-
 # 理由ダミー変数カラムを最終的に数値型（整数）に変換
 for col, params in rep_settings.items():
     # 非数値データはNaNに変換し、NaNを0で補完（欠損データの一貫性確保）
     df2[col] = pd.to_numeric(df2[col], errors='coerce').fillna(0).astype(int)
-
 
 # 住所情報の構造化：郵便番号と住所文字列の分離
 df2['post'] = df2['post'].str[1:9] # 郵便番号部分（9桁目まで）を抽出
@@ -389,57 +394,8 @@ df2['address'] = df2['address'].str[9:] # 9桁目以降を住所として抽出
 rep(df2,"post","ー", "-")
 
 # 複合カラム内の各要素をセット型（Set）に変換（順序を問わない一意な属性の集合として扱う）
-# この処理は、後の類似度計算のための準備段階であり、計算効率のボトルネックとなりうる
 df2['c'] = df2['c'].apply(lambda s: set(x.strip() for x in str(s).split('/')))
 df2['type_status'] = df2['type_status'].apply(lambda s: set(x.strip() for x in str(s).split('/')))
-
-
-# 西暦変換ロジックの実装と年月日への分割（データ解析における時系列情報の標準化）
-for i in ["r_year", "r_month", "r_day","s_year", "s_month", "s_day"]:
-    # 年月日カラムを初期値0で初期化
-    df2[i]=0
-
-
-# 和暦から西暦への変換処理（Pythonループによる行ごとの非ベクトル化処理）
-# 処理速度の最適化が必要なボトルネックの一つ（学術的な妥当性と計算負荷のトレードオフ）
-for i in df2.index:
-    try:
-        reg = str(df2['register'].loc[i])
-        if "昭" in reg:
-            # 昭和年を西暦に変換
-            df2.loc[i, "r_year"] = 1925+int(reg[2:4])
-        elif "平" in reg:
-            # 平成年を西暦に変換
-            df2.loc[i, "r_year"] = 2000+int(reg[2:4])-12
-        elif "令" in reg:
-            # 令和年を西暦に変換
-            df2.loc[i, "r_year"] = 2020+int(reg[2:4])-2
-            
-        # 月と日の抽出
-        df2.loc[i, "r_month"] = int(reg[5:7])
-        df2.loc[i, "r_day"] = int(reg[8:])
-    except (ValueError, IndexError, TypeError):
-        # データ型変換やインデックスエラー時のロバストなエラー処理
-        pass
-
-for i in df2.index:
-    try:
-        start = str(df2['start'].loc[i])
-        if "昭" in start:
-            df2.loc[i, "s_year"] = 1925+int(start[2:4])
-        elif "平" in start:
-            df2.loc[i, "s_year"] = 2000+int(start[2:4])-12
-        elif "令" in start:
-            df2.loc[i, "s_year"] = 2020+int(start[2:4])-2
-            
-        df2.loc[i, "s_month"] = int(start[5:7])
-        df2.loc[i, "s_day"] = int(start[8:])
-    except (ValueError, IndexError, TypeError):
-        pass
-
-
-# 処理済みである元の和暦カラムを削除
-df2.drop(columns=['register', 'start'], inplace=True)
 
 # 施設種別フラグカラムの初期化
 for i in ["defunct", "yoryo", "clinic","hospital", "sougou", "locsup", "tokutei"]:
@@ -460,7 +416,6 @@ flag_dict = {
 # 各エンティティの type_status がキーワードを含むかを判定し、バイナリフラグを立てる
 for col, keyword in flag_dict.items():
     df2[col] = df2["type_status"].apply(lambda s: 1 if keyword in s else 0)
-
 
 # 医師数/歯科医師数カラムを数値型に変換（分析のためのデータ型最終調整）
 for col in cols:
@@ -489,7 +444,6 @@ replace_pairs = [
     ("、", ","), 
     ("・", ","), 
     ("/", ","),
-    # 全角数字の半角変換
     ("０","0"), 
     ("１","1"), 
     ("２","2"), 
@@ -543,9 +497,7 @@ reppairs = [
 for old, new in reppairs:
     rep(df3, 'c', old, new)
 
-
 # 診療科区分（リファレンス辞書）
-# 63の診療科に対する公式名と内部識別子（英語名）のマッピング
 cref = {
     1: ["internalmedicine", "内科"], 
     2: ["psychosomaticmedicine", "心療内科"], 
@@ -612,11 +564,10 @@ cref = {
     63: ["pediatriccardiology", "小児循環器科"]
 }
 
-
 for k, v in cref.items():
     df3[v[0]] = 0
 
-# 類似度計算関数 SequenceMatcher (Ratcliff/Obershelpアルゴリズム) のラッパー
+# 類似度計算関数 SequenceMatcher
 # 文字列間の類似度を浮動小数点数（0.0〜1.0）で定量化する
 def similar(a, b):
     return SequenceMatcher(None, a, b).ratio()
@@ -630,8 +581,7 @@ def split_subjects(s):
     parts = [p.strip() for p in s.split(',') if p.strip()]
     return parts
 
-# 類似度計算による診療科マッチングのメイン処理（Pythonループによる逐次処理）
-# O(N*M)の計算複雑性を持ち、大規模データ処理における主要なボトルネック（N: 行数, M: 診療科数）
+# 類似度計算による診療科マッチングのメイン処理
 for i, row in df3.iterrows():
     # cカラムからダミーカンマを除去して分割
     subjects = split_subjects(row['c'])
@@ -644,24 +594,25 @@ for i, row in df3.iterrows():
         for k, v in cref.items():
             # 入力文字列とリファレンス診療科名との類似度を計算
             score = similar(sub, v[1])
-            
             # (1) 新しいスコアが現在の最大スコアより大きい場合
             if score > best_score:
                 best_score = score
                 # リストをリセットし、新しいベストキーを追加
                 best_k_list = [k]
-            
             # (2) 新しいスコアが現在の最大スコアと同点の場合（多重マッチの許容）
             elif score == best_score and score > 0:
                 # リストに同点キーを追加
                 best_k_list.append(k)
-        
         # (3) 類似度が閾値（>0）を超え、該当するキーがある場合にフラグを立てる
         if best_score > 0:
             for best_k in best_k_list:
                 # 該当する診療科のバイナリフラグ（ダミー変数）を1に設定
                 df3.at[i, cref[best_k][0]] = 1
 
+#codeの整理と都道府県番号の付与
+rep(df3, 'code', ",", "")
+rep(df3, 'code', "-", "")
+df3['code'] = df3['pref'].astype(str) + df3['code'].fillna('')
 
 # 都道府県コードから正式名称へのマッピング辞書
 pref_dict = {
@@ -722,12 +673,8 @@ df3['address'] = df3['pref'].map(pref_dict) + df3['address'].fillna('')
 # 最終データセットを中間ファイルとして保存
 df3.to_excel(TOTAL2_FILE, index=False)
 
-
-
 #世界測地系の経度・緯度を出力するための準備（外部ジオコーディングAPI連携のインターフェース）
 # ジオコーディングに必要なID、郵便番号、住所のサブセットを抽出
 df4=df3[['id','post','address']]
 # 外部サービスで利用するためのCSV形式で出力（BOM付きUTF-8エンコーディングを指定）
 df4.to_csv(ADDRESS_CSV, index=False, header=False, encoding="utf-8-sig")
-
-
